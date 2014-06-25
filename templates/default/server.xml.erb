@@ -74,7 +74,7 @@
          APR (HTTP/AJP) Connector: /docs/apr.html
          Define a non-SSL HTTP/1.1 Connector on port <%= @port %>
     -->
-    <Connector port="<%= @port %>" protocol="HTTP/1.1"
+    <Connector port="<%= @port %>" protocol="org.apache.coyote.http11.Http11NioProtocol"
                connectionTimeout="20000"
                URIEncoding="UTF-8"
              <% if @proxy_port -%>
@@ -101,7 +101,7 @@
          This connector uses the JSSE configuration, when using APR, the
          connector should be using the OpenSSL style configuration
          described in the APR documentation -->
-    <Connector port="<%= @ssl_port %>" protocol="HTTP/1.1" SSLEnabled="true"
+    <Connector port="<%= @ssl_port %>" protocol="org.apache.coyote.http11.Http11NioProtocol" SSLEnabled="true"
              <% if @ssl_proxy_port -%>
                proxyPort="<%= @ssl_proxy_port %>"
              <% end -%>

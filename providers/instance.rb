@@ -154,6 +154,21 @@ action :configure do
     end
   end
 
+  if new_resource.authbind
+    script "authbind-files" do
+      interpreter "bash"
+      code <<-BLA
+        sudo touch /etc/authbind/byport/80
+        sudo chmod 500 /etc/authbind/byport/80
+        sudo chown #{new_resource.user} /etc/authbind/byport/80
+
+        sudo touch /etc/authbind/byport/443
+        sudo chmod 500 /etc/authbind/byport/443
+        sudo chown #{new_resource.user} /etc/authbind/byport/443
+      BLA
+    end
+  end
+
   template "#{new_resource.config_dir}/server.xml" do
     source 'server.xml.erb'
       variables ({
@@ -201,38 +216,19 @@ action :configure do
       notifies :restart, "service[#{instance}]"
     end
   else
-    script "create_keystore-#{instance}" do
-      interpreter 'bash'
-      action :nothing
-      cwd new_resource.config_dir
-      code <<-EOH
-        cat #{new_resource.ssl_chain_files.join(' ')} > cacerts.pem
+    execute "create_keystore-#{instance}" do
+      group new_resource.group
+      command <<-EOH
         openssl pkcs12 -export \
-         -inkey #{new_resource.ssl_key_file} \
-         -in #{new_resource.ssl_cert_file} \
-         -chain \
-         -CAfile cacerts.pem \
+         -inkey #{new_resource.config_dir}/#{new_resource.ssl_key_file} \
+         -in #{new_resource.config_dir}/#{new_resource.ssl_cert_file} \
          -password pass:#{node['tomcat']['keystore_password']} \
-         -out #{new_resource.keystore_file}
+         -out #{new_resource.config_dir}/#{new_resource.keystore_file}
       EOH
+      umask 0007
+      creates "#{new_resource.config_dir}/#{new_resource.keystore_file}"
+      action :run
       notifies :restart, "service[#{instance}]"
-    end
-
-    cookbook_file "#{new_resource.config_dir}/#{new_resource.ssl_cert_file}" do
-      mode '0644'
-      notifies :run, "script[create_keystore-#{instance}]"
-    end
-
-    cookbook_file "#{new_resource.config_dir}/#{new_resource.ssl_key_file}" do
-      mode '0644'
-      notifies :run, "script[create_keystore-#{instance}]"
-    end
-
-    new_resource.ssl_chain_files.each do |cert|
-      cookbook_file "#{new_resource.config_dir}/#{cert}" do
-        mode '0644'
-        notifies :run, "script[create_keystore-#{instance}]"
-      end
     end
   end
 
