@@ -191,6 +191,14 @@ action :configure do
     notifies :restart, "service[#{instance}]"
   end
 
+  template "#{new_resource.config_dir}/web.xml" do
+    source 'web.xml.erb'
+    owner 'root'
+    group 'root'
+    mode '0644'
+    notifies :restart, "service[#{instance}]"
+  end
+
   template "#{new_resource.config_dir}/logging.properties" do
     source 'logging.properties.erb'
     owner 'root'
@@ -226,9 +234,9 @@ action :configure do
          -out #{new_resource.config_dir}/#{new_resource.keystore_file}
       EOH
       umask 0007
-      creates "#{new_resource.config_dir}/#{new_resource.keystore_file}"
       action :run
       notifies :restart, "service[#{instance}]"
+      not_if "[ #{new_resource.config_dir}/#{new_resource.ssl_key_file} -ot #{new_resource.config_dir}/#{new_resource.keystore_file} ]"
     end
   end
 
